@@ -1,12 +1,18 @@
 package ast
 
-import "github.com/ollybritton/monkey/token"
+import (
+	"bytes"
+	"fmt"
+
+	"github.com/ollybritton/monkey/token"
+)
 
 // Node is a node in the abstract syntax tree.
 // TokenLiteral should return a string representing the literal value of the token associated with that Node,
 // such as "5" or "if"
 type Node interface {
 	TokenLiteral() string
+	String() string
 }
 
 // Statement is a node which holds a statement. A statement is that it doesn't produce a value, unlike expressions, which do.
@@ -37,6 +43,17 @@ func (p *Program) TokenLiteral() string {
 	return p.Statements[0].TokenLiteral()
 }
 
+// String returns all the statements in the program joined together.
+func (p *Program) String() string {
+	out := bytes.Buffer{}
+
+	for _, s := range p.Statements {
+		out.WriteString(s.String())
+	}
+
+	return out.String()
+}
+
 // LetStatement represents a let statement, such as "let a = 1" or "let q = 5 * add(1,2)"
 // The general form is "let <ident> = <expression>"
 type LetStatement struct {
@@ -50,6 +67,25 @@ func (ls *LetStatement) statementNode() {}
 // TokenLiteral returns the literal value of the LET token. This is will always be "let"
 func (ls *LetStatement) TokenLiteral() string { return ls.Token.Literal }
 
+// String returns the string representation of that let statement.
+func (ls *LetStatement) String() string {
+	out := bytes.Buffer{}
+
+	out.WriteString(ls.TokenLiteral() + " ")
+	out.WriteString(ls.Name.String())
+	out.WriteString(" = ")
+
+	if ls.Value != nil {
+		out.WriteString(ls.Value.String())
+	} else {
+		out.WriteString("<nil>")
+	}
+
+	out.WriteString(";")
+
+	return out.String()
+}
+
 // Identifier represents an identifier, which is something like a variable or function name.
 type Identifier struct {
 	Token token.Token // the token.IDENT token
@@ -60,6 +96,9 @@ func (i *Identifier) expressionNode() {}
 
 // TokenLiteral returns the literal value of the IDENT token. This will be the name of the variable.
 func (i *Identifier) TokenLiteral() string { return i.Token.Literal }
+
+// String returns the name of the identifier.
+func (i *Identifier) String() string { return i.Value }
 
 // ReturnStatement represents a return statement, such as "return 0" or "return add(15)"
 // The general form is "return <expression>"
@@ -72,3 +111,165 @@ func (rs *ReturnStatement) statementNode() {}
 
 // TokenLiteral returns the literal value of the return token. This will always be "return".
 func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
+
+// String returns the string representation of the return statement.
+func (rs *ReturnStatement) String() string {
+	out := bytes.Buffer{}
+
+	out.WriteString(rs.TokenLiteral() + " ")
+
+	if rs.ReturnValue != nil {
+		out.WriteString(rs.ReturnValue.String())
+	} else {
+		out.WriteString("<nil>")
+	}
+
+	out.WriteString(";")
+
+	return out.String()
+}
+
+// ExpressionStatement is an expresssion that is a statement. It does nothing, but is totally legal monkey code.
+// For example, "x+1;" is valid but has no effect. The general form is "<expression>;"
+type ExpressionStatement struct {
+	Token      token.Token // The first token of the expression
+	Expression Expression
+}
+
+func (es *ExpressionStatement) statementNode() {}
+
+// TokenLiteral returns the literal value of the first token in the expression.
+func (es *ExpressionStatement) TokenLiteral() string { return es.Token.Literal }
+
+// String returns the string representation of the expression statement.
+func (es *ExpressionStatement) String() string {
+	if es.Expression != nil {
+		return es.Expression.String()
+	}
+
+	return "<nil>"
+}
+
+// BlockStatement represents a set of statements surrounded by braces ("{" & "}").
+type BlockStatement struct {
+	Token      token.Token // The '{' token
+	Statements []Statement
+}
+
+func (bs *BlockStatement) statementNode() {}
+
+// TokenLiteral is the token's literal. I'm sick of writing this.
+func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
+
+// String is the string representation of the block.
+func (bs *BlockStatement) String() string {
+	var out bytes.Buffer
+
+	for _, s := range bs.Statements {
+		out.WriteString(s.String())
+	}
+
+	return out.String()
+}
+
+// IntegerLiteral represents an integer in the AST, like "5".
+type IntegerLiteral struct {
+	Token token.Token // the token.INT type
+	Value int64
+}
+
+func (il *IntegerLiteral) expressionNode() {}
+
+// TokenLiteral returns the literal value of the first token in the expression, which in this case is the value of the number
+// as a string.
+func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
+
+// String returns the string representation of the integer.
+func (il *IntegerLiteral) String() string { return il.Token.Literal }
+
+// Boolean represents a boolean in the ast, either "true" or "false"
+type Boolean struct {
+	Token token.Token // the token.TRUE | token.FALSE
+	Value bool
+}
+
+func (b *Boolean) expressionNode() {}
+
+// TokenLiteral the literal value of the token.
+func (b *Boolean) TokenLiteral() string { return b.Token.Literal }
+
+// String returns the string representation of the boolean.
+func (b *Boolean) String() string { return b.Token.Literal }
+
+// PrefixExpression wraps an expression using a prefix, such as "-" or "!"
+type PrefixExpression struct {
+	Token    token.Token // the prefix token, e.g. - or !
+	Operator string
+	Right    Expression
+}
+
+func (pe *PrefixExpression) expressionNode() {}
+
+// TokenLiteral returns the string representation of the prefix token, such as "-".
+func (pe *PrefixExpression) TokenLiteral() string { return pe.Token.Literal }
+
+// String returns the string representation of the prefix expression.
+func (pe *PrefixExpression) String() string {
+	return fmt.Sprintf("(%s%s)", pe.Operator, pe.Right.String())
+}
+
+// InfixExpression represents an infix expression, such as "a+5"
+type InfixExpression struct {
+	Token    token.Token // The operator, such as +
+	Left     Expression
+	Operator string
+	Right    Expression
+}
+
+func (ie *InfixExpression) expressionNode() {}
+
+// TokenLiteral returns the operator value as a string.
+func (ie *InfixExpression) TokenLiteral() string { return ie.Token.Literal }
+
+// String returns the infix expression as a string, wrapping in brackets.
+func (ie *InfixExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	out.WriteString(ie.Left.String())
+	out.WriteString(" " + ie.Operator + " ")
+	out.WriteString(ie.Right.String())
+	out.WriteString(")")
+
+	return out.String()
+}
+
+// IfExpression represents an if-else statement in the AST.
+type IfExpression struct {
+	Token       token.Token // the 'if' token.
+	Condition   Expression
+	Consequence *BlockStatement
+	Alternative *BlockStatement
+}
+
+func (ife *IfExpression) expressionNode() {}
+
+// TokenLiteral returns the literal value of the 'if' token, which is always 'if'.
+func (ife *IfExpression) TokenLiteral() string { return ife.Token.Literal }
+
+// String returns the if statement represented as a string.
+func (ife *IfExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("if")
+	out.WriteString(ife.Condition.String())
+	out.WriteString(" ")
+	out.WriteString(ife.Consequence.String())
+
+	if ife.Alternative != nil {
+		out.WriteString("else ")
+		out.WriteString(ife.Alternative.String())
+	}
+
+	return out.String()
+}
