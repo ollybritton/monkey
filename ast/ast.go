@@ -3,6 +3,7 @@ package ast
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/ollybritton/monkey/token"
 )
@@ -270,6 +271,66 @@ func (ife *IfExpression) String() string {
 		out.WriteString("else ")
 		out.WriteString(ife.Alternative.String())
 	}
+
+	return out.String()
+}
+
+// FunctionLiteral represents a function in the AST.
+type FunctionLiteral struct {
+	Token      token.Token // the 'fn' token.
+	Parameters []*Identifier
+	Body       *BlockStatement
+}
+
+func (fl *FunctionLiteral) expressionNode() {}
+
+// TokenLiteral is the token, literal.
+func (fl *FunctionLiteral) TokenLiteral() string { return fl.Token.Literal }
+
+// String returns the string representation of the function.
+func (fl *FunctionLiteral) String() string {
+	var out bytes.Buffer
+
+	params := []string{}
+	for _, p := range fl.Parameters {
+		params = append(params, p.String())
+	}
+
+	out.WriteString(fl.TokenLiteral())
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(")")
+	out.WriteString(fl.Body.String())
+
+	return out.String()
+}
+
+// CallExpression represents a function call inside the program.
+// <expression>(<command seperated expressions>)
+type CallExpression struct {
+	Token     token.Token
+	Function  Expression
+	Arguments []Expression
+}
+
+func (ce *CallExpression) expressionNode() {}
+
+// TokenLiteral returns the literal value expression's token.
+func (ce *CallExpression) TokenLiteral() string { return ce.Token.Literal }
+
+// String returns the string representation of the function.
+func (ce *CallExpression) String() string {
+	var out bytes.Buffer
+
+	var arguments []string
+	for _, a := range ce.Arguments {
+		arguments = append(arguments, a.String())
+	}
+
+	out.WriteString(ce.Function.String())
+	out.WriteString("(")
+	out.WriteString(strings.Join(arguments, ", "))
+	out.WriteString(")")
 
 	return out.String()
 }
