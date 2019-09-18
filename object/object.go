@@ -19,8 +19,10 @@ const (
 	NULL_OBJ    = "NULL"
 	INTEGER_OBJ = "INTEGER"
 	BOOLEAN_OBJ = "BOOLEAN"
+	STRING_OBJ  = "STRING"
 
 	FUNCTION_OBJ = "FUNCTION"
+	BUILTIN_OBJ  = "BUILTIN"
 )
 
 // Object is an interface that represents an object inside the program. The reason this is an interface and not a struct
@@ -29,6 +31,9 @@ type Object interface {
 	Type() ObjectType
 	Inspect() string
 }
+
+// BuiltinFunction is a function that is built-in to the interpreter, such as len()
+type BuiltinFunction func(args ...Object) Object
 
 // Integer represents an integer, such as "5" or "1232".
 type Integer struct {
@@ -111,3 +116,25 @@ func (f *Function) Inspect() string {
 
 	return out.String()
 }
+
+// String represents a string in the program.
+type String struct {
+	Value string
+}
+
+// Type gets the STRING_OBJ type.
+func (s *String) Type() ObjectType { return STRING_OBJ }
+
+// Inspect gets the literal value of the string.
+func (s *String) Inspect() string { return s.Value }
+
+// Builtin wraps a built-in function so that it is usable inside the program.
+type Builtin struct {
+	Fn BuiltinFunction
+}
+
+// Type returns the BUILTIN_OBJ type.
+func (b *Builtin) Type() ObjectType { return BUILTIN_OBJ }
+
+// Inspect tells us that this is a builtin function.
+func (b *Builtin) Inspect() string { return "builtin function" }

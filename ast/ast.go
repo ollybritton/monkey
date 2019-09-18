@@ -334,3 +334,17 @@ func (ce *CallExpression) String() string {
 
 	return out.String()
 }
+
+// StringLiteral represents a string in the AST.
+type StringLiteral struct {
+	Token token.Token
+	Value string
+}
+
+func (sl *StringLiteral) expressionNode() {}
+
+// TokenLiteral returns the literal value of the expression's token. This will always be the value of the string.
+func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
+
+// String gets the value of the string.
+func (sl *StringLiteral) String() string { return sl.Token.Literal }
