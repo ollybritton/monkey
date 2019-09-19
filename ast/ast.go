@@ -401,3 +401,30 @@ func (ie *IndexExpression) String() string {
 
 	return out.String()
 }
+
+// HashLiteral represents a map-like data structure.
+type HashLiteral struct {
+	Token token.Token
+	Pairs map[Expression]Expression
+}
+
+func (hl *HashLiteral) expressionNode() {}
+
+// TokenLiteral returns the literal blah blah blah.
+func (hl *HashLiteral) TokenLiteral() string { return hl.Token.Literal }
+
+// String returns the string representation of the map.
+func (hl *HashLiteral) String() string {
+	var out bytes.Buffer
+
+	pairs := []string{}
+	for key, value := range hl.Pairs {
+		pairs = append(pairs, key.String()+":"+value.String())
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, ", "))
+	out.WriteString("}")
+
+	return out.String()
+}

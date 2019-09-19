@@ -98,6 +98,8 @@ func Eval(node ast.Node, environment *object.Environment) object.Object {
 		}
 
 		return &object.Array{Elements: elements}
+	case *ast.HashLiteral:
+		return evalHashLiteral(node, environment)
 	case *ast.IndexExpression:
 		left := Eval(node.Left, environment)
 		if isError(left) {
@@ -256,14 +258,29 @@ func evalIntegerInfixExpression(operator string, left, right object.Object) obje
 }
 
 func evalStringInfixExpression(operator string, left, right object.Object) object.Object {
-	if operator != "+" {
+	switch operator {
+	case "+":
+		leftVal := left.(*object.String).Value
+		rightVal := right.(*object.String).Value
+
+		return &object.String{Value: leftVal + rightVal}
+
+	case "==":
+		leftVal := left.(*object.String).Value
+		rightVal := right.(*object.String).Value
+
+		return nativeBoolToBooleanObject(leftVal == rightVal)
+
+	case "!=":
+		leftVal := left.(*object.String).Value
+		rightVal := right.(*object.String).Value
+
+		return nativeBoolToBooleanObject(leftVal != rightVal)
+
+	default:
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 
-	leftVal := left.(*object.String).Value
-	rightVal := right.(*object.String).Value
-
-	return &object.String{Value: leftVal + rightVal}
 }
 
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
@@ -284,6 +301,8 @@ func evalIndexExpression(left, index object.Object) object.Object {
 		return evalArrayIndexExpression(left, index)
 	case left.Type() == object.STRING_OBJ && index.Type() == object.INTEGER_OBJ:
 		return evalStringIndexExpression(left, index)
+	case left.Type() == object.HASH_OBJ:
+		return evalHashIndexExpression(left, index)
 	default:
 		return newError("index operator not supported: %s", left.Type())
 	}
@@ -312,6 +331,48 @@ func evalStringIndexExpression(left, index object.Object) object.Object {
 	}
 
 	return &object.String{Value: string(str.Value[idx.Value])}
+}
+
+func evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Object {
+	pairs := make(map[object.HashKey]object.HashPair)
+
+	for keyNode, valueNode := range node.Pairs {
+		key := Eval(keyNode, env)
+		if isError(key) {
+			return key
+		}
+
+		hashKey, ok := key.(object.Hashable)
+		if !ok {
+			return newError("unusable as hash key: %s", key.Type())
+		}
+
+		value := Eval(valueNode, env)
+		if isError(value) {
+			return value
+		}
+
+		hashed := hashKey.HashKey()
+		pairs[hashed] = object.HashPair{Key: key, Value: value}
+	}
+
+	return &object.Hash{Pairs: pairs}
+}
+
+func evalHashIndexExpression(hash, index object.Object) object.Object {
+	hashObject := hash.(*object.Hash)
+
+	key, ok := index.(object.Hashable)
+	if !ok {
+		return newError("unusable as hask key: %s", index.Type())
+	}
+
+	pair, ok := hashObject.Pairs[key.HashKey()]
+	if !ok {
+		return NULL
+	}
+
+	return pair.Value
 }
 
 func applyFunction(fn object.Object, args []object.Object) object.Object {
