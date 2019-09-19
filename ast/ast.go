@@ -12,7 +12,10 @@ import (
 // TokenLiteral should return a string representing the literal value of the token associated with that Node,
 // such as "5" or "if"
 type Node interface {
+	// TokenLiteral is the literal value of the token associated with the node.
 	TokenLiteral() string
+
+	// String is a string representation of the node.
 	String() string
 }
 
@@ -348,3 +351,53 @@ func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
 
 // String gets the value of the string.
 func (sl *StringLiteral) String() string { return sl.Token.Literal }
+
+// ArrayLiteral represents an array.
+type ArrayLiteral struct {
+	Token    token.Token
+	Elements []Expression
+}
+
+func (al *ArrayLiteral) expressionNode() {}
+
+// TokenLiteral gets the literal value of the expression's token. This will always be the value of the '[' token.
+func (al *ArrayLiteral) TokenLiteral() string { return al.Token.Literal }
+
+// String gets the string representation of the array.
+func (al *ArrayLiteral) String() string {
+	var out bytes.Buffer
+
+	elements := []string{}
+
+	for _, e := range al.Elements {
+		elements = append(elements, e.String())
+	}
+
+	out.WriteString("[")
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString("]")
+
+	return out.String()
+}
+
+// IndexExpression represents an access of an array using an index, such as [1,2,3,4,5][2]
+type IndexExpression struct {
+	Token token.Token // The '[' token.
+	Left  Expression
+	Index Expression
+}
+
+func (ie *IndexExpression) expressionNode()      {}
+func (ie *IndexExpression) TokenLiteral() string { return ie.Token.Literal }
+func (ie *IndexExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	out.WriteString(ie.Left.String())
+	out.WriteString("[")
+	out.WriteString(ie.Index.String())
+	out.WriteString("]")
+	out.WriteString(")")
+
+	return out.String()
+}

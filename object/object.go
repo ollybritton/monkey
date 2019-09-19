@@ -20,6 +20,7 @@ const (
 	INTEGER_OBJ = "INTEGER"
 	BOOLEAN_OBJ = "BOOLEAN"
 	STRING_OBJ  = "STRING"
+	ARRAY_OBJ   = "ARRAY"
 
 	FUNCTION_OBJ = "FUNCTION"
 	BUILTIN_OBJ  = "BUILTIN"
@@ -28,8 +29,8 @@ const (
 // Object is an interface that represents an object inside the program. The reason this is an interface and not a struct
 // is because every value needs a different internal representation.
 type Object interface {
-	Type() ObjectType
-	Inspect() string
+	Type() ObjectType // Type is the ObjectType value of that object.
+	Inspect() string  // Inspect gets a string representation of the object.
 }
 
 // BuiltinFunction is a function that is built-in to the interpreter, such as len()
@@ -127,6 +128,27 @@ func (s *String) Type() ObjectType { return STRING_OBJ }
 
 // Inspect gets the literal value of the string.
 func (s *String) Inspect() string { return s.Value }
+
+// Array represents the array data structure.
+type Array struct {
+	Elements []Object
+}
+
+func (a *Array) Type() ObjectType { return ARRAY_OBJ }
+func (a *Array) Inspect() string {
+	var out bytes.Buffer
+	var elements []string
+
+	for _, e := range a.Elements {
+		elements = append(elements, e.Inspect())
+	}
+
+	out.WriteString("[")
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString("]")
+
+	return out.String()
+}
 
 // Builtin wraps a built-in function so that it is usable inside the program.
 type Builtin struct {
